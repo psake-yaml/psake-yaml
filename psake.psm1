@@ -20,6 +20,10 @@
 
 #Requires -Version 2.0
 
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$libDir = Join-Path $here "lib"
+Add-Type -Path $libDir\YamlDotNet.dll
+
 if ($PSVersionTable.PSVersion.Major -ge 3)
 {
     $script:IgnoreError = 'Ignore'
@@ -504,6 +508,18 @@ function LoadConfiguration {
             throw "Error Loading Configuration from psake-config.ps1: " + $_
         }
     }
+
+    $ymlConfigFilePath = (join-path $configdir "psake.yml")
+
+    if (test-path $ymlConfigFilePath -pathType Leaf) {
+        try {
+            $yamlConfig = Get-Content $ymlConfigFilePath | ConvertFrom-Yaml
+            $tmp = New-Object PSObject -Property $yamlConfig
+            $config = Combine-Objects -First $config -Second $tmp
+        } catch {
+            throw "Error Loading Configuration from psake.yml: " + $_
+        }
+    }
 }
 
 function GetCurrentConfigurationOrDefault() {
@@ -865,6 +881,338 @@ function WriteTaskTimeSummary($invokePsakeDuration) {
         $list | format-table -autoSize -property Name,Duration | out-string -stream | where-object { $_ }
     }
 }
+
+
+function Get-YamlDocuments {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [string]$Yaml
+    )
+    PROCESS {
+        $stringReader = new-object System.IO.StringReader($Yaml)
+        $yamlStream = New-Object "YamlDotNet.RepresentationModel.YamlStream"
+        $yamlStream.Load([System.IO.TextReader] $stringReader)
+        $stringReader.Close()
+        return $yamlStream
+    }
+}
+
+function Convert-ValueToProperType {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [System.Object]$Value
+    )
+    PROCESS {
+        if (!($Value -is [string])) {
+            return $Value
+        }
+        $types = @([int], [long], [double], [boolean], [datetime])
+        foreach($i in $types){
+            try {
+                return $i::Parse($Value)
+            } catch {
+                continue
+            }
+        }
+        return $Value
+    }
+}
+
+function Convert-YamlMappingToHashtable {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [YamlDotNet.RepresentationModel.YamlMappingNode]$Node
+    )
+    PROCESS {
+        $ret = @{}
+        foreach($i in $Node.Children.Keys) {
+            $ret[$i.Value] = Convert-YamlDocumentToPSObject $Node.Children[$i]
+        }
+        return $ret
+    }
+}
+
+function Convert-YamlSequenceToArray {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [YamlDotNet.RepresentationModel.YamlSequenceNode]$Node
+    )
+    PROCESS {
+        $ret = [System.Collections.Generic.List[object]](New-Object "System.Collections.Generic.List[object]")
+        foreach($i in $Node.Children){
+            $ret.Add((Convert-YamlDocumentToPSObject $i))
+        }
+        return $ret
+    }
+}
+
+function Convert-YamlDocumentToPSObject {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
+        [System.Object]$Node
+    )
+    PROCESS {
+        switch($Node.GetType().FullName){
+            "YamlDotNet.RepresentationModel.YamlMappingNode"{
+                return Convert-YamlMappingToHashtable $Node
+            }
+            "YamlDotNet.RepresentationModel.YamlSequenceNode" {
+                return Convert-YamlSequenceToArray $Node
+            }
+            "YamlDotNet.RepresentationModel.YamlScalarNode" {
+                return (Convert-ValueToProperType $Node.Value)
+            }
+        }
+    }
+}
+
+function Convert-HashtableToDictionary {
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [hashtable]$Data
+    )
+    foreach($i in $($data.Keys)) {
+        $Data[$i] = Convert-PSObjectToGenericObject $Data[$i]
+    }
+    return $Data
+}
+
+function Convert-ListToGenericList {
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [array]$Data
+    )
+    for($i=0; $i -lt $Data.Count; $i++) {
+        $Data[$i] = Convert-PSObjectToGenericObject $Data[$i]
+    }
+    return $Data
+}
+
+function Convert-PSCustomObjectToDictionary {
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [PSCustomObject]$Data
+    )
+    $ret = [System.Collections.Generic.Dictionary[string,object]](New-Object 'System.Collections.Generic.Dictionary[string,object]')
+    foreach ($i in $Data.psobject.properties) {
+        $ret[$i.Name] = Convert-PSObjectToGenericObject $i.Value
+    }
+    return $ret
+}
+
+function Convert-PSObjectToGenericObject {
+    Param(
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
+        [System.Object]$Data
+    )
+    # explicitly cast object to its type. Without this, it gets wrapped inside a powershell object
+    # which causes YamlDotNet to fail
+    $data = $data -as $data.GetType().FullName
+    switch($data.GetType()) {
+        ($_.FullName -eq "System.Management.Automation.PSCustomObject") {
+            return Convert-PSCustomObjectToDictionary
+        }
+        default {
+            if (([System.Collections.IDictionary].IsAssignableFrom($_))){
+                return Convert-HashtableToDictionary $data
+            } elseif (([System.Collections.IList].IsAssignableFrom($_))) {
+                return Convert-ListToGenericList $data
+            }
+            return $data
+        }
+    }
+}
+
+function ConvertFrom-Yaml {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
+        [string]$Yaml,
+        [switch]$AllDocuments=$false
+    )
+    PROCESS {
+        if(!$Yaml){
+            return
+        }
+        $documents = Get-YamlDocuments -Yaml $Yaml
+        if (!$documents.Count) {
+            return
+        }
+        if($documents.Count -eq 1){
+            return Convert-YamlDocumentToPSObject $documents[0].RootNode
+        }
+        if(!$AllDocuments) {
+            return Convert-YamlDocumentToPSObject $documents[0].RootNode
+        }
+        $ret = @()
+        foreach($i in $documents) {
+            $ret += Convert-YamlDocumentToPSObject $i.RootNode
+        }
+        return $ret
+    }
+}
+
+function ConvertTo-Yaml {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [System.Object]$Data,
+        [Parameter(Mandatory=$false)]
+        [string]$OutFile,
+        [switch]$Force=$false
+    )
+    BEGIN {
+        $d = [System.Collections.Generic.List[object]](New-Object "System.Collections.Generic.List[object]")
+    }
+    PROCESS {
+        $d.Add($data)
+    }
+    END {
+        if($d -eq $null){
+            return
+        }
+        $norm = Convert-PSObjectToGenericObject $d
+        if($OutFile) {
+            $parent = Split-Path $OutFile
+            if(!(Test-Path $parent)) {
+                Throw "Parent folder for specified path does not exist"
+            }
+            if((Test-Path $OutFile) -and !$Force){
+                Throw "Target file already exists. Use -Force to overwrite."
+            }
+            $wrt = New-Object "System.IO.StreamWriter" $OutFile
+        } else {
+            $wrt = New-Object "System.IO.StringWriter"
+        }
+        try {
+            $serializer = New-Object "YamlDotNet.Serialization.Serializer" 0
+            $serializer.Serialize($wrt, $norm)
+        } finally {
+            $wrt.Close()
+        }
+        if($OutFile){
+            return
+        }else {
+            return $wrt.ToString()
+        }
+    }
+}
+
+<#
+    .NOTES
+    ===========================================================================
+     Filename              : Merge-Hashtables.ps1
+     Created on            : 2014-09-04
+     Created by            : Frank Peter Schultze
+    ===========================================================================
+
+    .SYNOPSIS
+        Create a single hashtable from two hashtables where the second given
+        hashtable will override.
+
+    .DESCRIPTION
+        Create a single hashtable from two hashtables. In case of duplicate keys
+        the function the second hashtable's key values "win". Merge-Hashtables
+        supports nested hashtables.
+
+    .EXAMPLE
+        $configData = Merge-Hashtables -First $defaultData -Second $overrideData
+
+    .INPUTS
+        None
+
+    .OUTPUTS
+        System.Collections.Hashtable
+#>
+function Merge-Hashtables
+{
+    [CmdletBinding()]
+    Param
+    (
+        #Identifies the first hashtable
+        [Parameter(Mandatory=$true)]
+        [Hashtable]
+        $First
+    ,
+        #Identifies the second hashtable
+        [Parameter(Mandatory=$true)]
+        [Hashtable]
+        $Second
+    )
+
+    function Set-Keys ($First, $Second)
+    {
+        @($First.Keys) | Where-Object {
+            $Second.ContainsKey($_)
+        } | ForEach-Object {
+            if (($First.$_ -is [Hashtable]) -and ($Second.$_ -is [Hashtable]))
+            {
+                Set-Keys -First $First.$_ -Second $Second.$_
+            }
+            else
+            {
+                $First.Remove($_)
+                $First.Add($_, $Second.$_)
+            }
+        }
+    }
+
+    function Add-Keys ($First, $Second)
+    {
+        @($Second.Keys) | ForEach-Object {
+            if ($First.ContainsKey($_))
+            {
+                if (($Second.$_ -is [Hashtable]) -and ($First.$_ -is [Hashtable]))
+                {
+                    Add-Keys -First $First.$_ -Second $Second.$_
+                }
+            }
+            else
+            {
+                $First.Add($_, $Second.$_)
+            }
+        }
+    }
+
+    # Do not touch the original hashtables
+    $firstClone  = $First.Clone()
+    $secondClone = $Second.Clone()
+
+    # Bring modified keys from secondClone to firstClone
+    Set-Keys -First $firstClone -Second $secondClone
+
+    # Bring additional keys from secondClone to firstClone
+    Add-Keys -First $firstClone -Second $secondClone
+
+    # return firstClone
+    $firstClone
+}
+
+Function Combine-Objects {
+    Param (
+        [Parameter(mandatory=$true)]$First,
+        [Parameter(mandatory=$true)]$Second
+    )
+
+    $arguments = [PSCustomObject]@()
+
+    foreach ( $p in $First.PSObject.Properties){
+        $arguments += @{ $p.Name = $p.value }
+    }
+
+    foreach ( $p in $Second.PSObject.Properties){
+        $arguments += @{ $p.Name = $p.value }
+    }
+
+    $result = [PSCustomObject]$arguments
+    return $result
+}
+
 
 DATA msgs {
 convertfrom-stringdata @'

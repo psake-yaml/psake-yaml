@@ -19,6 +19,7 @@
                           'Assert',
                           'Exec')
     VariablesToExport = 'psake'
+    ScriptsToProcess = @("LoadYaml.ps1")
 
     PrivateData = @{
         PSData = @{
