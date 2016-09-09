@@ -1,6 +1,6 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-$manifestPath = "$here\psake.psd1"
+$manifestPath = "$here\..\psake.psd1"
 
 Import-Module $manifestPath -Force
 
