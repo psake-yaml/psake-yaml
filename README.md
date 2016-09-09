@@ -36,7 +36,7 @@ Use `Get-Help` command to show information about psake and examples of how to us
 Get-Help Invoke-psake -Full
 ```
 
-**Step 3:** Run some examples
+**Step 4:** Run some examples
 
 ```powershell
 cd .\examples
