@@ -1,4 +1,6 @@
 version: 4.6.1.{build}
 
-build_script:
+build: false
+
+test_script:
   - ps: .\psake-buildTester.ps1
