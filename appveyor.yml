@@ -17,3 +17,9 @@ after_test:
 
 artifacts:
   - path: 'artifacts\*.nupkg'
+
+deploy:
+  - provider: NuGet
+    server: https://www.myget.org/F/psake-yaml/api/v2/package
+    api_key:
+      secure: gVkXGqHTcaeG2LvitDXLjncrcpwp8OmpohC+bVBYCRaQ7pXWZFcnZLA2K3kwma2+
