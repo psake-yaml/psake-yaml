@@ -1,7 +1,7 @@
 @{
     ModuleToProcess   = 'psake.psm1'
     ModuleVersion     = '4.6.0'
-    GUID              = 'cfb53216-072f-4a46-8975-ff7e6bda05a5'
+    GUID              = 'e5482e6b-cdf7-4b28-9f20-18040b02e80e'
     Author            = 'James Kovacs'
     Copyright         = 'Copyright (c) 2012-16 James Kovacs, Damian Hickey and Contributors'
     PowerShellVersion = '2.0'
