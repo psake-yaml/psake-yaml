@@ -1,6 +1,6 @@
 @{
     ModuleToProcess   = 'psake.psm1'
-    ModuleVersion     = '4.6.0'
+    ModuleVersion     = '4.6.1'
     GUID              = 'e5482e6b-cdf7-4b28-9f20-18040b02e80e'
     Author            = 'James Kovacs'
     Copyright         = 'Copyright (c) 2012-16 James Kovacs, Damian Hickey and Contributors'

@@ -22,7 +22,7 @@ if (Test-Path $destDir -PathType container) {
 Copy-Item -Recurse $dir\nuget $destDir
 Copy-Item -Recurse $dir\en-US $destDir\tools\en-US
 Copy-Item -Recurse $dir\examples $destDir\tools\examples
-@( "psake.cmd", "psake.ps1", "psake.psm1", "psake.psd1", "psake-config.ps1", "README.markdown", "license.txt") |
+@( "psake.cmd", "psake.ps1", "psake.psm1", "psake.psd1", "psake-config.ps1", "README.md", "license.txt") |
     % { Copy-Item $dir\$_ $destDir\tools }
 
 .\nuget pack "$destDir\psake.nuspec" -Verbosity quiet -Version $version

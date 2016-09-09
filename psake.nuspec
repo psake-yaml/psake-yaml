@@ -12,4 +12,18 @@
     <language>en-US</language>
     <tags>build powershell</tags>
   </metadata>
+  <files>
+    <file src="psake.psd1" target="tools" />
+    <file src="psake.psm1" target="tools" />
+    <file src="psake.cmd" target="tools" />
+    <file src="LoadYaml.ps1" target="tools" />
+    <file src="psake.ps1" target="tools" />
+    <file src="psake-config.ps1" target="tools" />
+    <file src="README.md" target="tools" />
+    <file src="LICENSE*" target="tools" />
+    <file src="lib\*.*" target="tools\lib" />
+    <file src="nuget\tools\*.*" target="tools" />
+    <file src="examples\**\*.*" target="tools\Examples" />
+    <file src="en-US\*.*" target="tools\en-US" />
+  </files>
 </package>
