@@ -1,7 +1,7 @@
 Properties {
     $currentDir = Resolve-Path .
     $baseDir = $psake.build_script_dir
-    $version = "4.6.1"
+    $version = "4.6.1-alpha$($env:APPVEYOR_BUILD_NUMBER)"
     $nuget = "$baseDir\NuGet.exe"
 }
 
