@@ -1,3 +1,4 @@
+# Pester test: psake-docs.Tests.ps1
 
 Task default -depends CheckDocs
 
