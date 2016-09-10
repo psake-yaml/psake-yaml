@@ -23,7 +23,7 @@ UnitTests        ut
 "@
 
         $expectedLogoDoc = @"
-psake version {0}`nCopyright (c) 2010-2014 James Kovacs & Contributors`n
+psake-yaml version {0}`nCopyright (c) 2010-2016 James Kovacs & Contributors`n
 
 Name             Alias Depends On                         Default Description        
 ----             ----- ----------                         ------- -----------        
