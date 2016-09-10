@@ -16,6 +16,12 @@ InModuleScope Psake {
 
             $psake.build_success | Should be $true
         }
+
+        It "Invoke-Psake should read the build.yml when configured in psake-config.ps1" {
+            Invoke-Psake "$here\specs\yaml\yaml2\default.ps1"
+
+            $psake.build_success | Should be $true
+        }
     }
 }
 

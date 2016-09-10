@@ -909,14 +909,14 @@ function Convert-ValueToProperType {
         if (!($Value -is [string])) {
             return $Value
         }
-        $types = @([int], [long], [double], [boolean], [datetime])
-        foreach($i in $types){
-            try {
-                return $i::Parse($Value)
-            } catch {
-                continue
-            }
-        }
+        #$types = @([int], [long], [double], [boolean], [datetime])
+        #foreach($i in $types){
+        #    try {
+        #        return $i::Parse($Value)
+        #    } catch {
+        #        continue
+        #    }
+        #}
         return $Value
     }
 }
