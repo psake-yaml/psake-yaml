@@ -509,15 +509,14 @@ function LoadConfiguration {
         }
     }
 
-    $ymlConfigFilePath = (join-path $configdir "psake.yml")
+    $ymlConfigFilePath = (join-path $configdir $config.buildConfigFileName)
 
     if (test-path $ymlConfigFilePath -pathType Leaf) {
         try {
             $yamlConfig = Get-Content $ymlConfigFilePath | ConvertFrom-Yaml
-            $tmp = New-Object PSObject -Property $yamlConfig
-            $config = Combine-Objects -First $config -Second $tmp
+            $psake.build = $yamlConfig
         } catch {
-            throw "Error Loading Configuration from psake.yml: " + $_
+            throw "Error loading configuration from ${config.buildConfigFileName}: " + $_
         }
     }
 }
@@ -540,6 +539,7 @@ function CreateConfigurationForNewContext {
 
     $config = new-object psobject -property @{
         buildFileName = $previousConfig.buildFileName;
+        buildConfigFileName = $previousConfig.buildConfigFileName;
         framework = $previousConfig.framework;
         taskNameFormat = $previousConfig.taskNameFormat;
         verboseError = $previousConfig.verboseError;
@@ -1256,6 +1256,7 @@ $psake.context = new-object system.collections.stack # holds onto the current st
 $psake.run_by_psake_build_tester = $false # indicates that build is being run by psake-BuildTester
 $psake.config_default = new-object psobject -property @{
     buildFileName = "default.ps1";
+    buildConfigFileName = "psake.yml";
     framework = "4.0";
     taskNameFormat = "Executing {0}";
     verboseError = $false;
@@ -1263,6 +1264,7 @@ $psake.config_default = new-object psobject -property @{
     modules = $null;
     moduleScope = "";
 } # contains default configuration, can be overriden in psake-config.ps1 in directory with psake.psm1 or in directory with current build script
+$psake.build = $null;
 
 $psake.build_success = $false # indicates that the current build was successful
 $psake.build_script_file = $null # contains a System.IO.FileInfo for the current build script
