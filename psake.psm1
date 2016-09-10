@@ -498,11 +498,12 @@ function LoadConfiguration {
         [string] $configdir = $PSScriptRoot
     )
 
+    $config = GetCurrentConfigurationOrDefault
+
     $psakeConfigFilePath = (join-path $configdir "psake-config.ps1")
 
     if (test-path $psakeConfigFilePath -pathType Leaf) {
         try {
-            $config = GetCurrentConfigurationOrDefault
             . $psakeConfigFilePath
         } catch {
             throw "Error Loading Configuration from psake-config.ps1: " + $_
