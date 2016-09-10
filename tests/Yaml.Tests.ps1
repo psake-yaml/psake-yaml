@@ -6,6 +6,7 @@ Import-Module $manifestPath -Force
 
 InModuleScope Psake {
     Describe "Yaml configuration" {
+        $psake.run_by_psake_build_tester = $true
 
         It "psake.config_defaults should use psake.yml" {
             $psake.config_default.buildConfigFileName | Should be 'psake.yml'

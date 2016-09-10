@@ -438,7 +438,7 @@ function Invoke-psake {
         # if we are running in a nested scope (i.e. running a psake script from a psake script) then we need to re-throw the exception
         # so that the parent script will fail otherwise the parent script will report a successful build
         $inNestedScope = ($psake.context.count -gt 1)
-        if ( $inNestedScope ) {
+        if ( $inNestedScope -or $psake.run_by_psake_build_tester ) {
             throw $_
         } else {
             if (!$psake.run_by_psake_build_tester) {
