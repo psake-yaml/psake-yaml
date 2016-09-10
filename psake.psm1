@@ -438,7 +438,7 @@ function Invoke-psake {
         # if we are running in a nested scope (i.e. running a psake script from a psake script) then we need to re-throw the exception
         # so that the parent script will fail otherwise the parent script will report a successful build
         $inNestedScope = ($psake.context.count -gt 1)
-        if ( $inNestedScope -or $psake.run_by_psake_build_tester ) {
+        if ( $inNestedScope -or $psake.pester_tests ) {
             throw $_
         } else {
             if (!$psake.run_by_psake_build_tester) {
@@ -1255,6 +1255,7 @@ $script:psake = @{}
 $psake.version = $manifest.Version.ToString()
 $psake.context = new-object system.collections.stack # holds onto the current state of all variables
 $psake.run_by_psake_build_tester = $false # indicates that build is being run by psake-BuildTester
+$psake.pester_tests = $false # indicates that build is being run by Pester tests
 $psake.config_default = new-object psobject -property @{
     buildFileName = "default.ps1";
     buildConfigFileName = "psake.yml";
